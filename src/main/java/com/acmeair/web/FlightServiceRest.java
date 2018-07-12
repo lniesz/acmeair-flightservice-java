@@ -16,7 +16,6 @@
 
 package com.acmeair.web;
 
-import com.acmeair.securityutils.SecurityUtils;
 import com.acmeair.service.FlightService;
 
 import java.io.StringReader;
@@ -29,6 +28,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import javax.annotation.security.RolesAllowed;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -38,7 +38,6 @@ import javax.json.JsonReaderFactory;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -51,9 +50,7 @@ public class FlightServiceRest {
   
   @Inject
   private FlightService flightService;
-    
-  @Inject
-  private SecurityUtils secUtils;
+
   
   private static final JsonReaderFactory jsonReaderFactory = Json.createReaderFactory(null);
   private static final JsonBuilderFactory jsonObjectFactory  = Json.createBuilderFactory(null);
@@ -92,27 +89,17 @@ public class FlightServiceRest {
    * Get reward miles for flight segment.
    */
   @POST
+  @RolesAllowed({ "admin", "user" })
   @Path("/getrewardmiles")
   @Consumes({"application/x-www-form-urlencoded"})
   @Produces("application/json")
   @Timed(name = "com.acmeair.web.FlightServiceRest.getRewardsMiles", 
       tags = "app=flightservice-java")
   public MilesResponse getRewardMiles(
-          @HeaderParam("acmeair-id") String headerId,
-          @HeaderParam("acmeair-date") String headerDate,
-          @HeaderParam("acmeair-sig-body") String headerSigBody, 
-          @HeaderParam("acmeair-signature") String headerSig,
-          @FormParam("flightSegment") String segmentId
+      @FormParam("flightSegment") String segmentId
   ) {
-    if (secUtils.secureServiceCalls()) { 
-      String body = "flightSegment=" + segmentId;
-      secUtils.verifyBodyHash(body, headerSigBody);
-      secUtils.verifyFullSignature("POST", "/getrewardmiles", headerId, headerDate,
-              headerSigBody,headerSig);
-    }
-
-    Long miles = flightService.getRewardMiles(segmentId); 
    
+    Long miles =  flightService.getRewardMiles(segmentId); 
     return new MilesResponse(miles);
   }
 
